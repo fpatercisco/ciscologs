@@ -1,0 +1,34 @@
+---
+- name: Generate & fetch ciscologs (OS logs)
+  hosts: all
+  become: true
+  become_user: root
+
+  tasks:
+    - name: Generate 12-minute iostat log
+      ansible.builtin.shell:
+        chdir: /tmp
+        cmd: timeout 12s iostat -xcdt 1 -g All | tee /tmp/iostat.log
+    - name: Fetch iostat log
+      ansible.builtin.fetch:
+        src: /tmp/iostat.log
+        dest: .
+        fail_on_missing: true
+    - name: Remove any old cisco log archive
+      ansible.builtin.file:
+        path: /tmp/cisco.tar.gz
+        state: absent
+    - name: Remove any old cisco log directory
+      ansible.builtin.file:
+        path: /tmp/cisco
+        state: absent
+    - name: Generate ciscologs (OS logs)
+      ansible.builtin.script:
+        chdir: /root
+        cmd: ciscologs.sh -y
+        creates: /tmp/cisco.tar.gz
+    - name: Fetch ciscologs (OS logs)
+      ansible.builtin.fetch:
+        src: /tmp/cisco.tar.gz
+        dest: .
+        fail_on_missing: true
